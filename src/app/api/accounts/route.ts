@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       )
     }
 
+    
     const account = await prisma.socialAccount.upsert({
       where: { platform },
       update: {
