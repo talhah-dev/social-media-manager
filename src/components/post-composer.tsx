@@ -69,12 +69,7 @@ export function PostComposer() {
     }))
   }
 
-  const getResolvedCaption = (platformId: string) => {
-    const override = overrides[platformId]?.trim()
-    return override || globalCaption
-  }
-
-  const handlePublish = (e: React.FormEvent) => {
+  const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!globalCaption.trim() && Object.values(overrides).every((v) => !v.trim())) {
@@ -89,26 +84,67 @@ export function PostComposer() {
     setIsPublishing(true)
     const activeList = PLATFORMS.filter((p) => connectedPlatforms.includes(p.id))
 
-    setTimeout(() => {
-      console.log("Publishing payload:", {
-        globalCaption,
-        overrides,
-        tiktokTitle,
-        imagesCount: images.length,
-        destinations: activeList.map((p) => ({
-          platform: p.id,
-          caption: getResolvedCaption(p.id),
-          ...(p.id === "tiktok" ? { title: tiktokTitle } : {}),
-        })),
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          globalCaption,
+          overrides,
+          tiktokTitle,
+          mediaUrls: images,
+          targetPlatforms: activeList.map((p) => p.id),
+        }),
       })
 
+      const data = await res.json()
+
+      if (data.success) {
+        setIsPublishing(false)
+        setGlobalCaption("")
+        setOverrides({})
+        setTiktokTitle("")
+        setImages([])
+
+        const results: Array<{ platform: string; success: boolean; error?: string }> = data.dispatchResults || []
+        const succeeded = results.filter((r) => r.success).map((r) => r.platform)
+        const failed = results.filter((r) => !r.success)
+
+        if (failed.length === 0) {
+          toast.add({
+            title: "Dispatched to All Channels!",
+            description: `Successfully published live to ${succeeded.join(", ") || activeList.length + " channel(s)"}.`,
+            type: "success",
+          })
+        } else if (succeeded.length > 0) {
+          toast.add({
+            title: "Partially Dispatched",
+            description: `Published to ${succeeded.join(", ")}. Failed for ${failed.map((f) => f.platform).join(", ")}.`,
+            type: "warning",
+          })
+        } else {
+          toast.add({
+            title: "Post Saved to Database",
+            description: `Saved to history. API errors: ${failed.map((f) => `${f.platform}: ${f.error}`).join(" | ")}`,
+            type: "info",
+          })
+        }
+      } else {
+        setIsPublishing(false)
+        toast.add({
+          title: "Publish Failed",
+          description: data.error || "Could not save post to database.",
+          type: "error",
+        })
+      }
+    } catch {
       setIsPublishing(false)
       toast.add({
-        title: "Published Successfully!",
-        description: `Your post was dispatched to ${activeList.length} connected channel${activeList.length > 1 ? "s" : ""}.`,
-        type: "success",
+        title: "Publish Error",
+        description: "An unexpected error occurred while saving the post.",
+        type: "error",
       })
-    }, 1800)
+    }
   }
 
   const activePlatformConfigs = PLATFORMS.filter((p) => connectedPlatforms.includes(p.id))

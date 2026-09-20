@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { FcGoogle } from "react-icons/fc"
 import { cn } from "cn"
 
@@ -22,41 +23,70 @@ import {
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
+import { authClient } from "@/lib/auth-client"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    console.log("Login submitted:", { email, password })
-    setTimeout(() => {
+
+    try {
+      const res = await authClient.signIn.email({
+        email,
+        password,
+      })
+
+      if (res.error) {
+        setIsLoading(false)
+        toast.add({
+          title: "Login Failed",
+          description: res.error.message || "Invalid email or password.",
+          type: "error",
+        })
+        return
+      }
+
       setIsLoading(false)
       toast.add({
         title: "Welcome back!",
         description: "You have successfully logged in.",
         type: "success",
       })
-    }, 1200)
+      router.push("/")
+    } catch {
+      setIsLoading(false)
+      toast.add({
+        title: "Login Error",
+        description: "Could not complete login request.",
+        type: "error",
+      })
+    }
   }
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
-    console.log("Google Login clicked")
-    setTimeout(() => {
+    try {
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/",
+      })
+    } catch {
       setIsGoogleLoading(false)
       toast.add({
-        title: "Google Login Successful",
-        description: "Welcome to Social Media Manager.",
-        type: "success",
+        title: "Google Auth Notice",
+        description: "Google OAuth credentials must be configured in .env",
+        type: "error",
       })
-    }, 1200)
+    }
   }
 
   return (

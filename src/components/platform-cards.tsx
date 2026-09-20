@@ -39,9 +39,10 @@ export const PLATFORMS: PlatformConfig[] = [
     bgColor: "bg-zinc-900 border border-zinc-700",
     description: "Post updates, threads, and short-form media to X followers.",
     fields: [
-      { key: "apiKey", label: "API Key", placeholder: "Enter your Twitter API Key" },
-      { key: "apiSecret", label: "API Secret Key", placeholder: "Enter your Twitter API Secret", type: "password" },
-      { key: "accessToken", label: "Access Token", placeholder: "Enter Bearer / Access Token", type: "password" },
+      { key: "apiKey", label: "API Key (Consumer Key)", placeholder: "Enter your Twitter API Key" },
+      { key: "apiSecret", label: "API Secret Key (Consumer Secret)", placeholder: "Enter your Twitter API Secret", type: "password" },
+      { key: "accessToken", label: "Access Token", placeholder: "Enter Access Token", type: "password" },
+      { key: "accessTokenSecret", label: "Access Token Secret", placeholder: "Enter Access Token Secret", type: "password" },
     ],
   },
   {

@@ -3,6 +3,8 @@
 import { useRef, useState } from "react"
 import { ImagePlus, X, FileImage } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
+import { toast } from "@/components/ui/toast"
 
 interface MediaUploaderProps {
   images: string[]
@@ -12,21 +14,57 @@ interface MediaUploaderProps {
 export function MediaUploader({ images, onChange }: MediaUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
-  const handleFiles = (files: FileList | null) => {
-    if (!files) return
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+
+    setIsUploading(true)
     const fileArray = Array.from(files)
-    fileArray.forEach((file) => {
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          if (e.target?.result) {
-            onChange([...images, e.target.result as string])
+    const uploadedUrls: string[] = []
+
+    for (const file of fileArray) {
+      if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+        try {
+          const formData = new FormData()
+          formData.append("file", file)
+
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          })
+
+          const data = await res.json()
+          if (data.success && data.url) {
+            uploadedUrls.push(data.url)
+          } else {
+            toast.add({
+              title: "Upload Failed",
+              description: data.error || "Failed to upload file to Blob storage",
+              type: "error",
+            })
           }
+        } catch {
+          toast.add({
+            title: "Upload Error",
+            description: `Could not upload ${file.name}`,
+            type: "error",
+          })
         }
-        reader.readAsDataURL(file)
       }
-    })
+    }
+
+    if (uploadedUrls.length > 0) {
+      onChange([...images, ...uploadedUrls])
+      toast.add({
+        title: "Media Uploaded",
+        description: `Successfully uploaded ${uploadedUrls.length} file(s) to Vercel Blob.`,
+        type: "success",
+      })
+    }
+
+    setIsUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
   const removeImage = (indexToRemove: number) => {
@@ -56,29 +94,32 @@ export function MediaUploader({ images, onChange }: MediaUploaderProps) {
           setIsDragging(false)
           handleFiles(e.dataTransfer.files)
         }}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => {
+          if (!isUploading) fileInputRef.current?.click()
+        }}
         className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
           isDragging
             ? "border-primary bg-primary/5"
             : "border-border hover:border-primary/50 hover:bg-muted/30"
-        }`}
+        } ${isUploading ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,video/*"
           multiple
           className="hidden"
+          disabled={isUploading}
           onChange={(e) => handleFiles(e.target.files)}
         />
         <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground mb-2">
-          <ImagePlus className="size-5" />
+          {isUploading ? <Spinner className="size-5" /> : <ImagePlus className="size-5" />}
         </div>
         <p className="text-xs font-medium text-foreground">
-          Click to upload or drag & drop media
+          {isUploading ? "Uploading to Vercel Blob..." : "Click to upload or drag & drop media"}
         </p>
         <p className="text-[11px] text-muted-foreground mt-0.5">
-          PNG, JPG, WebP or GIF
+          PNG, JPG, WebP, GIF or MP4
         </p>
       </div>
 

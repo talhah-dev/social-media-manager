@@ -41,8 +41,8 @@ const STEPS: GuideStep[] = [
     description: "Navigate to the 'Keys and Tokens' tab of your app.",
     details: [
       "Under 'Consumer Keys', click Generate to copy your 'API Key' and 'API Key Secret'.",
-      "Under 'Authentication Tokens', generate the 'Access Token and Secret'.",
-      "Copy all 3 values into the X Connect Dialog in Social Media Manager.",
+      "Under 'Authentication Tokens', generate the 'Access Token and Secret' (both Access Token & Access Token Secret).",
+      "Copy all 4 values into the X Connect Dialog in Social Media Manager.",
     ],
   },
 ]
@@ -54,7 +54,7 @@ export default function XGuidePage() {
       icon={FaXTwitter}
       iconBg="bg-zinc-900 border border-zinc-700"
       developerPortalUrl="https://developer.x.com/en/portal/dashboard"
-      requiredKeys={["API Key", "API Secret Key", "Access Token"]}
+      requiredKeys={["API Key", "API Secret Key", "Access Token", "Access Token Secret"]}
       steps={STEPS}
     />
   )

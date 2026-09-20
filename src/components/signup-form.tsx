@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { FcGoogle } from "react-icons/fc"
 import { cn } from "cn"
 
@@ -22,11 +23,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
+import { authClient } from "@/lib/auth-client"
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -34,7 +37,7 @@ export function SignupForm({
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (password !== confirmPassword) {
@@ -47,28 +50,56 @@ export function SignupForm({
     }
 
     setIsLoading(true)
-    console.log("Signup submitted:", { name, email, password, confirmPassword })
-    setTimeout(() => {
+
+    try {
+      const res = await authClient.signUp.email({
+        name,
+        email,
+        password,
+      })
+
+      if (res.error) {
+        setIsLoading(false)
+        toast.add({
+          title: "Registration Failed",
+          description: res.error.message || "Could not create account.",
+          type: "error",
+        })
+        return
+      }
+
       setIsLoading(false)
       toast.add({
         title: "Account Created!",
         description: "Welcome to Social Media Manager.",
         type: "success",
       })
-    }, 1200)
+      router.push("/")
+    } catch {
+      setIsLoading(false)
+      toast.add({
+        title: "Sign up Error",
+        description: "An unexpected error occurred during signup.",
+        type: "error",
+      })
+    }
   }
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     setIsGoogleLoading(true)
-    console.log("Google Signup clicked")
-    setTimeout(() => {
+    try {
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/",
+      })
+    } catch {
       setIsGoogleLoading(false)
       toast.add({
-        title: "Google Sign-up Successful",
-        description: "Your account is ready to use.",
-        type: "success",
+        title: "Google Auth Notice",
+        description: "Google OAuth credentials must be configured in .env",
+        type: "error",
       })
-    }, 1200)
+    }
   }
 
   return (
